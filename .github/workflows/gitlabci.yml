@@ -2,11 +2,9 @@ name: Lighthouse
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   lighthouse:
@@ -19,25 +17,45 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build (optional)
+        run: npm run build
+        # remove if your app is served by npm start only
+
+      - name: Start App
+        run: |
+          npm start &
+          echo "Waiting for app to start..."
+          sleep 15
+        # adjust sleep if your app needs longer
 
       - name: Install Google Chrome
         run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
+            | sudo tee /etc/apt/sources.list.d/google-chrome.list
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
 
       - name: Install Lighthouse CLI
         run: npm install -g lighthouse
 
-      - name: Run Lighthouse
+      - name: Run Lighthouse locally
         run: |
-          lighthouse https://your-app-url \
+          lighthouse http://localhost:3000/ \
             --output html \
             --output-path ./lighthouse-report.html \
             --chrome-flags="--headless --no-sandbox --disable-gpu"
+        # if your app runs on a different port, update :3000
 
-      - name: Upload Report
+      - name: Upload Lighthouse Report
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-report
-          path: ./lighthouse-report.html
+          path: lighthouse-report.html
