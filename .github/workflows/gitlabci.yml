@@ -1,92 +1,61 @@
-name: CI
+name: Lighthouse
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
-
-permissions:
-  contents: write
+    branches: [main]
 
 jobs:
-  build-and-test:
-    name: Build and Test (Node.js)
+  lighthouse:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        # Use latest LTS (22.x) – add more versions here if you want to test a matrix
-        node-version: [22.x]
-
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
+          node-version: 18
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm install
 
-      - name: Build
-        run: npm run build --if-present
+      - name: Install wait-on
+        run: npm install -g wait-on
 
-  lighthouse:
-    name: Lighthouse Audit
-    needs: build-and-test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Use Node.js 22.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          cache: npm
-
-      - name: Install Lighthouse and wait-on
+      - name: Start Server
         run: |
-          npm install -g lighthouse wait-on
+          echo "Starting Express server..."
+          npm start &
+          echo "Waiting for server to start..."
+          sleep 2
 
-      - name: Start application
-        run: npm start &
-
-      - name: Wait for application to be ready
+      - name: Wait for Server Availability
         run: wait-on http://localhost:3000
+        timeout-minutes: 2
 
-      - name: Prepare lighthouse directory
+      - name: Install Google Chrome
         run: |
-          if [ -d lighthouse ]; then
-            rm -f lighthouse/*.html || true
-          fi
-          mkdir -p lighthouse
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
+            | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
 
-      - name: Run Lighthouse audit
+      - name: Install Lighthouse CLI
+        run: npm install -g lighthouse
+
+      - name: Run Lighthouse Audit
         run: |
-          lighthouse http://localhost:3000 --emulated-form-factor=mobile \
+          lighthouse http://localhost:3000 \
             --output html \
-            --output-path "lighthouse/lighthouse-report-${{ github.run_number }}.html" \
-            --chrome-flags="--headless --no-sandbox --disable-gpu --disable-dev-shm-usage --ignore-certificate-errors --disable-features=IsolateOrigins,site-per-process"
+            --output-path ./lighthouse-report.html \
+            --chrome-flags="--headless --no-sandbox --disable-gpu"
 
-      - name: Commit Lighthouse report to repo
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
-        run: |
-          REPORT_NAME="lighthouse-report-${{ github.run_number }}.html"
-
-          git fetch origin "$TARGET_BRANCH"
-          git checkout "$TARGET_BRANCH"
-
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-
-          git add lighthouse/
-          git commit -m "Add Lighthouse report for run ${{ github.run_number }}" || exit 0
-          git push origin HEAD:"$TARGET_BRANCH"
+      - name: Upload Lighthouse Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: lighthouse-report.html
