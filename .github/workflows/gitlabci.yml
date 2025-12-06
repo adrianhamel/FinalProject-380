@@ -1,61 +1,116 @@
-name: Lighthouse
+name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ "main" ]
   pull_request:
-    branches: [main]
+    branches: [ "main" ]
+
+permissions:
+  contents: write
 
 jobs:
+  build-and-test:
+    name: Build and Test (Node.js)
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # Use latest LTS (22.x) – add more versions here if you want to test a matrix
+        node-version: [22.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build --if-present
+
   lighthouse:
+    name: Lighthouse Audit
+    needs: build-and-test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22.x
+          cache: npm
 
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Build (optional)
-        run: npm run build
-        # remove if your app is served by npm start only
-
-      - name: Start App
+      - name: Install Lighthouse and wait-on
         run: |
-          npm start &
-          echo "Waiting for app to start..."
-          sleep 15
-        # adjust sleep if your app needs longer
+          npm install -g lighthouse wait-on
 
-      - name: Install Google Chrome
+      - name: Start application
+        run: npm start &
+
+      - name: Wait for application to be ready
+        run: wait-on http://localhost:3000
+
+      - name: Prepare lighthouse directory
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
-            | sudo tee /etc/apt/sources.list.d/google-chrome.list
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
+          if [ -d lighthouse ]; then
+            rm -f lighthouse/*.html || true
+          fi
+          mkdir -p lighthouse
 
-      - name: Install Lighthouse CLI
-        run: npm install -g lighthouse
-
-      - name: Run Lighthouse locally
+      - name: Run Lighthouse audit
         run: |
-          lighthouse http://localhost:3000/ \
+          lighthouse http://localhost:3000 --emulated-form-factor=mobile \
             --output html \
-            --output-path ./lighthouse-report.html \
-            --chrome-flags="--headless --no-sandbox --disable-gpu"
-        # if your app runs on a different port, update :3000
+            --output-path "lighthouse/lighthouse-report-${{ github.run_number }}.html" \
+            --chrome-flags="--headless --no-sandbox --disable-gpu --disable-dev-shm-usage --ignore-certificate-errors --disable-features=IsolateOrigins,site-per-process"
 
-      - name: Upload Lighthouse Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: lighthouse-report
-          path: lighthouse-report.html
+      - name: Update README with latest Lighthouse link
+        env:
+          REPORT_NUMBER: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import pathlib, os, re
+
+          path = pathlib.Path("README.md")
+          report_url = f"https://adrianhamel.github.io/lighthouse/lighthouse/lighthouse-report-{os.environ['REPORT_NUMBER']}.html"
+          pattern = r"https://adrianhamel\.github\.io/lighthouse/lighthouse/lighthouse-report-\d+\.html"
+
+          if path.exists():
+              text = path.read_text()
+          else:
+              text = ""
+
+          if re.search(pattern, text):
+              text = re.sub(pattern, report_url, text)
+          else:
+              text = "# lighthouse\n\nLatest Lighthouse report: " + report_url + "\n"
+
+          path.write_text(text)
+          PY
+
+      - name: Commit Lighthouse report to repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          REPORT_NAME="lighthouse-report-${{ github.run_number }}.html"
+
+          git fetch origin "$TARGET_BRANCH"
+          git checkout "$TARGET_BRANCH"
+
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          git add lighthouse/
+          git commit -m "Add Lighthouse report for run ${{ github.run_number }}" || exit 0
+          git push origin HEAD:"$TARGET_BRANCH"
