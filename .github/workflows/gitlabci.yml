@@ -74,6 +74,7 @@ jobs:
             git checkout $BRANCH_NAME
   
             mkdir -p lighthouse-results
+            rm -f lighthouse-results/*.html
             cp lighthouse-report.html "lighthouse-results/lighthouse-results-${{ github.run_number }}.html"
   
             git config user.name "github-actions"
