@@ -65,13 +65,21 @@ jobs:
           path: lighthouse-report.html
 
       - name: Save Lighthouse Report Into Repo
-        run: |
-          mkdir -p lighthouse-results
-          cp lighthouse-report.html "lighthouse-results/lighthouse-results-${{ github.run_number }}.html"
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add lighthouse-results/
-          git commit -m "Add Lighthouse report #${{ github.run_number }}"
-          git push
-        # Do NOT run this on merge commits, only during active PR runs
         if: github.event.pull_request.merged == false
+        run: |
+            BRANCH_NAME="${{ github.head_ref }}"
+            echo "Switching to PR branch: $BRANCH_NAME"
+  
+            git fetch origin $BRANCH_NAME
+            git checkout $BRANCH_NAME
+  
+            mkdir -p lighthouse-results
+            cp lighthouse-report.html "lighthouse-results/lighthouse-results-${{ github.run_number }}.html"
+  
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+  
+            git add lighthouse-results/
+            git commit -m "Add Lighthouse report #${{ github.run_number }}" || echo "No changes to commit"
+            git push origin $BRANCH_NAME
+  
