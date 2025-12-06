@@ -1,7 +1,5 @@
 /* 1990s Battle.net Theme - Neon Glory! */
 
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap');
-
 * {
     margin: 0;
     padding: 0;
@@ -9,7 +7,7 @@
 }
 
 body {
-    font-family: 'Orbitron', monospace;
+    font-family: 'Orbitron', 'Courier New', monospace;
     background: #000000;
     background-image: 
         radial-gradient(circle at 20% 50%, rgba(0, 100, 255, 0.3) 0%, transparent 50%),
@@ -62,7 +60,7 @@ body {
 }
 
 h1 {
-    font-family: 'Press Start 2P', monospace;
+    font-family: 'Press Start 2P', 'Courier New', monospace;
     font-size: 2.5em;
     color: #ff0066;
     text-align: center;
@@ -95,7 +93,7 @@ h1 {
 }
 
 h2 {
-    font-family: 'Press Start 2P', monospace;
+    font-family: 'Press Start 2P', 'Courier New', monospace;
     font-size: 1.5em;
     color: #00ff00;
     text-shadow: 
@@ -124,6 +122,20 @@ p {
     color: #00ffff;
     text-align: justify;
     text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+    line-height: 1.8;
+}
+
+/* Content section for better spacing */
+.content-section {
+    margin-top: 30px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-left: 4px solid #00ffff;
+    border-radius: 4px;
+}
+
+.content-section p:last-child {
+    margin-bottom: 0;
 }
 
 .nav {
@@ -199,7 +211,7 @@ p {
 }
 
 .game-block h3 {
-    font-family: 'Press Start 2P', monospace;
+    font-family: 'Press Start 2P', 'Courier New', monospace;
     font-size: 1.8em;
     margin-bottom: 20px;
     text-shadow: 0 0 20px;
@@ -329,6 +341,67 @@ p {
     box-shadow: 0 0 10px #ff0066;
 }
 
+/* Image styling */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 20px auto;
+    border: 3px solid #00ffff;
+    box-shadow: 
+        0 0 20px #00ffff,
+        0 0 40px #0066ff,
+        inset 0 0 20px rgba(0, 255, 255, 0.1);
+    animation: imageGlow 3s ease-in-out infinite;
+    border-radius: 4px;
+}
+
+@keyframes imageGlow {
+    0%, 100% {
+        box-shadow: 
+            0 0 20px #00ffff,
+            0 0 40px #0066ff,
+            inset 0 0 20px rgba(0, 255, 255, 0.1);
+        border-color: #00ffff;
+    }
+    50% {
+        box-shadow: 
+            0 0 30px #00ffff,
+            0 0 60px #0066ff,
+            0 0 80px #0099ff,
+            inset 0 0 30px rgba(0, 255, 255, 0.2);
+        border-color: #00ccff;
+    }
+}
+
+img:hover {
+    transform: scale(1.02);
+    transition: transform 0.3s ease;
+}
+
+/* Image container for better spacing */
+.image-container {
+    margin: 30px 0;
+    text-align: center;
+}
+
+.image-container img {
+    margin: 0 auto;
+}
+
+.image-caption {
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: #00ccff;
+    font-style: italic;
+    text-shadow: 0 0 5px rgba(0, 204, 255, 0.5);
+    padding: 5px 10px;
+    background: rgba(0, 204, 255, 0.1);
+    border: 1px solid rgba(0, 204, 255, 0.3);
+    border-radius: 3px;
+    display: inline-block;
+}
+
 /* Responsive design for smaller screens */
 @media (max-width: 768px) {
     .games-container {
@@ -346,6 +419,11 @@ p {
     .nav a {
         display: block;
         text-align: center;
+    }
+    
+    img {
+        margin: 15px auto;
+        border-width: 2px;
     }
 }
 
