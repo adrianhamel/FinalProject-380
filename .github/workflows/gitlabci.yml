@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: write   # REQUIRED to push the results
+
 jobs:
   lighthouse:
     runs-on: ubuntu-latest
@@ -11,6 +14,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true   # allow pushing back to repo
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -25,7 +30,6 @@ jobs:
 
       - name: Start Server
         run: |
-          echo "Starting Express server..."
           npm start &
           echo "Waiting for server to start..."
           sleep 2
@@ -54,8 +58,20 @@ jobs:
             --output-path ./lighthouse-report.html \
             --chrome-flags="--headless --no-sandbox --disable-gpu"
 
-      - name: Upload Lighthouse Report
+      - name: Upload Lighthouse Report Artifact
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-report
           path: lighthouse-report.html
+
+      - name: Save Lighthouse Report Into Repo
+        run: |
+          mkdir -p lighthouse-results
+          cp lighthouse-report.html "lighthouse-results/lighthouse-results-${{ github.run_number }}.html"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add lighthouse-results/
+          git commit -m "Add Lighthouse report #${{ github.run_number }}"
+          git push
+        # Do NOT run this on merge commits, only during active PR runs
+        if: github.event.pull_request.merged == false
