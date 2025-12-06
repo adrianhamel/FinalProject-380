@@ -1,0 +1,13 @@
+{
+  "name": "battle-net-1990s-website",
+  "version": "1.0.0",
+  "description": "1990s themed website about Battle.net's impact on PC gaming",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
+
